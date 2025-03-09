@@ -1,0 +1,84 @@
+import java.util.*;
+
+public class RecommendationSystem {
+    // Sample user preferences (User -> [Product1, Product2, ..., ProductN] Ratings)
+    static Map<String, Map<String, Integer>> userRatings = new HashMap<>();
+
+    public static void main(String[] args) {
+        // Sample dataset: User ratings for different products/movies
+        userRatings.put("User1", Map.of("ItemA", 5, "ItemB", 3, "ItemC", 4));
+        userRatings.put("User2", Map.of("ItemA", 4, "ItemB", 5, "ItemC", 2));
+        userRatings.put("User3", Map.of("ItemA", 2, "ItemB", 4, "ItemC", 5));
+
+        String targetUser = "User1";
+        String recommendedItem = getRecommendation(targetUser);
+
+        if (recommendedItem != null) {
+            System.out.println("Recommended item for " + targetUser + ": " + recommendedItem);
+        } else {
+            System.out.println("No recommendation available.");
+        }
+    }
+
+    // Calculate cosine similarity between two users
+    public static double calculateSimilarity(Map<String, Integer> user1, Map<String, Integer> user2) {
+        if (user1 == null || user2 == null || user1.isEmpty() || user2.isEmpty()) {
+            return 0; // Avoid NullPointerException and divide-by-zero error
+        }
+
+        double dotProduct = 0, normUser1 = 0, normUser2 = 0;
+
+        for (String item : user1.keySet()) {
+            if (user2.containsKey(item)) {
+                dotProduct += user1.get(item) * user2.get(item);
+            }
+            normUser1 += Math.pow(user1.get(item), 2);
+        }
+
+        for (int rating : user2.values()) {
+            normUser2 += Math.pow(rating, 2);
+        }
+
+        normUser1 = Math.sqrt(normUser1);
+        normUser2 = Math.sqrt(normUser2);
+
+        return (normUser1 * normUser2) == 0 ? 0 : dotProduct / (normUser1 * normUser2);
+    }
+
+    // Get recommended item for a user
+    public static String getRecommendation(String targetUser) {
+        if (!userRatings.containsKey(targetUser)) {
+            System.out.println("Error: User " + targetUser + " not found.");
+            return null;
+        }
+
+        Map<String, Integer> targetRatings = userRatings.get(targetUser);
+        if (targetRatings == null || targetRatings.isEmpty()) {
+            System.out.println("Error: No ratings available for " + targetUser);
+            return null;
+        }
+
+        String bestUser = null;
+        double maxSimilarity = 0;
+
+        for (String otherUser : userRatings.keySet()) {
+            if (!otherUser.equals(targetUser)) {
+                double similarity = calculateSimilarity(targetRatings, userRatings.get(otherUser));
+                if (similarity > maxSimilarity) {
+                    maxSimilarity = similarity;
+                    bestUser = otherUser;
+                }
+            }
+        }
+
+        if (bestUser == null) return null;
+
+        // Recommend an item that the similar user likes but the target user hasn't rated
+        for (String item : userRatings.get(bestUser).keySet()) {
+            if (!targetRatings.containsKey(item)) {
+                return item;
+            }
+        }
+        return null;
+    }
+}
